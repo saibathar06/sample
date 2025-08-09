@@ -76,8 +76,10 @@
                         <!-- Sections will be dynamically populated here -->
                         <div id="sc-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-red-700 pb-2">Supreme Court News</h2><div id="sc-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
                         <div id="hc-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-blue-600 pb-2">High Court News</h2><div id="hc-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
-                        <div id="columns-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-green-700 pb-2">Columns</h2><div id="columns-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
-                        <div id="interviews-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-purple-700 pb-2">Interviews</h2><div id="interviews-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
+                        <!-- FIX: Changed ID to match filtering logic -->
+                        <div id="columns-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-green-700 pb-2">Columns</h2><div id="columns-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
+                        <!-- FIX: Changed ID to match filtering logic -->
+                        <div id="interviews-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-purple-700 pb-2">Interviews</h2><div id="interviews-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
                     </div>
                     <div id="no-results" class="hidden text-center py-16"><i class="fas fa-search text-4xl text-gray-400 mb-4"></i><h3 class="text-2xl font-semibold text-gray-700">No Stories Found</h3><p class="text-gray-500 mt-2">We couldn't find any articles matching your search.</p></div>
                 </div>
@@ -109,7 +111,7 @@
             const newsContentArea = document.getElementById('news-content-area');
 
             // --- SKELETON LOADER ---
-            function createSkeletonCard() { /* ... skeleton code ... */ return `<div class="skeleton bg-white rounded-lg shadow-md overflow-hidden"><div class="w-full h-48 bg-gray-300"></div><div class="p-4 space-y-3"><div class="h-4 bg-gray-300 rounded w-1/4"></div><div class="h-6 bg-gray-300 rounded w-full"></div><div class="h-4 bg-gray-300 rounded w-5/6"></div><div class="h-4 bg-gray-300 rounded w-3/4"></div></div></div>`; }
+            function createSkeletonCard() { return `<div class="skeleton bg-white rounded-lg shadow-md overflow-hidden"><div class="w-full h-48 bg-gray-300"></div><div class="p-4 space-y-3"><div class="h-4 bg-gray-300 rounded w-1/4"></div><div class="h-6 bg-gray-300 rounded w-full"></div><div class="h-4 bg-gray-300 rounded w-5/6"></div><div class="h-4 bg-gray-300 rounded w-3/4"></div></div></div>`; }
             function showSkeletons() {
                 const containers = ['sc-news-container', 'hc-news-container', 'columns-container', 'interviews-container'];
                 containers.forEach(id => { document.getElementById(id).innerHTML = createSkeletonCard().repeat(3); });
@@ -138,34 +140,36 @@
                 container.innerHTML = '';
                 if (filteredArticles.length === 0) { container.innerHTML = '<p class="text-gray-500 md:col-span-2">No articles found in this category.</p>'; return; }
                 filteredArticles.forEach(article => {
-                    container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p><a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a></div></div>`;
+                    // FIX: Added cursor-pointer and removed the <a> tag for "Read More"
+                    container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card cursor-pointer" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p></div></div>`;
                 });
             }
 
-            // --- NEW: DYNAMIC AD FETCHING ---
+            // --- DYNAMIC AD FETCHING ---
             async function fetchAndDisplayAds() {
-                const { data, error } = await supabaseClient
-                    .from('advertisements')
-                    .select('ad_name, ad_code')
-                    .eq('is_active', true);
-
-                if (error) {
-                    console.error('Error fetching ads:', error);
-                    return;
-                }
-
+                const { data, error } = await supabaseClient.from('advertisements').select('ad_name, ad_code').eq('is_active', true);
+                if (error) { console.error('Error fetching ads:', error); return; }
                 data.forEach(ad => {
                     const adContainer = document.getElementById(`${ad.ad_name}-container`);
                     if (adContainer) {
                         adContainer.innerHTML = ad.ad_code;
-                        adContainer.classList.remove('ad-placeholder'); // Remove placeholder style if ad loads
+                        adContainer.classList.remove('ad-placeholder');
                     }
                 });
             }
 
             // --- VIEW & NAVIGATION LOGIC ---
-            function showView(viewToShow) { /* ... view logic ... */ allNewsView.classList.toggle('hidden', viewToShow !== 'all-news'); fullArticleView.classList.toggle('hidden', viewToShow !== 'full-article'); window.scrollTo(0, 0); }
-            function filterContent(category) { /* ... filter logic ... */ showView('all-news'); searchInput.value = ''; noResultsView.classList.add('hidden'); newsContentArea.classList.remove('hidden'); document.querySelectorAll('.content-section').forEach(section => { section.classList.toggle('hidden', category !== 'all' && section.id !== category + '-news-section'); }); }
+            function showView(viewToShow) { allNewsView.classList.toggle('hidden', viewToShow !== 'all-news'); fullArticleView.classList.toggle('hidden', viewToShow !== 'full-article'); window.scrollTo(0, 0); }
+            function filterContent(category) {
+                showView('all-news');
+                searchInput.value = '';
+                noResultsView.classList.add('hidden');
+                newsContentArea.classList.remove('hidden');
+                document.querySelectorAll('.content-section').forEach(section => {
+                    // FIX: Logic now correctly matches section IDs like 'columns-news-section'
+                    section.classList.toggle('hidden', category !== 'all' && section.id !== category + '-news-section');
+                });
+            }
 
             // --- EVENT LISTENERS ---
             document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('all'); });
@@ -176,17 +180,51 @@
             document.getElementById('interviews-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('interviews'); });
             document.getElementById('back-to-news-button').addEventListener('click', () => { showView('all-news'); filterContent('all'); });
 
-            newsContentArea.addEventListener('click', function(e) { /* ... read more logic ... */ if (e.target.classList.contains('read-more-link')) { e.preventDefault(); const card = e.target.closest('.news-card'); const articleId = parseInt(card.dataset.id); const article = allArticles.find(a => a.id === articleId); if (article) { document.getElementById('full-article-image').src = article.image_url || 'https://placehold.co/800x450/E2E8F0/4A5568?text=Image'; document.getElementById('full-article-title').textContent = article.title; document.getElementById('full-article-meta').textContent = `By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}`; document.getElementById('full-article-content').innerHTML = article.full_content.replace(/\n/g, '<br>'); showView('full-article'); } } });
+            // FIX: Event listener now listens for clicks on the entire card
+            newsContentArea.addEventListener('click', function(e) {
+                const card = e.target.closest('.news-card');
+                if (card) {
+                    e.preventDefault();
+                    const articleId = parseInt(card.dataset.id);
+                    const article = allArticles.find(a => a.id === articleId);
+
+                    if (article) {
+                        document.getElementById('full-article-image').src = article.image_url || 'https://placehold.co/800x450/E2E8F0/4A5568?text=Image';
+                        document.getElementById('full-article-title').textContent = article.title;
+                        document.getElementById('full-article-meta').textContent = `By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}`;
+                        document.getElementById('full-article-content').innerHTML = article.full_content.replace(/\n/g, '<br>');
+                        showView('full-article');
+                    }
+                }
+            });
 
             // --- SEARCH LOGIC WITH DEBOUNCING ---
-            function debounce(func, delay) { /* ... debounce logic ... */ let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
-            const handleSearch = () => { /* ... search logic ... */ const searchTerm = searchInput.value.toLowerCase(); const searchResults = allArticles.filter(article => article.title.toLowerCase().includes(searchTerm) || article.summary.toLowerCase().includes(searchTerm)); filterContent('all'); const allContainers = document.querySelectorAll('[id$="-news-container"]'); allContainers.forEach(c => c.innerHTML = ''); if (searchResults.length === 0) { noResultsView.classList.remove('hidden'); newsContentArea.classList.add('hidden'); return; } renderNewsFromData(searchResults.filter(a => a.category === 'supreme-court'), 'sc-news-container'); renderNewsFromData(searchResults.filter(a => a.category === 'high-court'), 'hc-news-container'); renderNewsFromData(searchResults.filter(a => a.category === 'columns'), 'columns-container'); renderNewsFromData(searchResults.filter(a => a.category === 'interviews'), 'interviews-container'); };
-            function renderNewsFromData(data, containerId) { /* ... render search results logic ... */ const container = document.getElementById(containerId); if (!container) return; container.innerHTML = ''; data.forEach(article => { container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p><a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a></div></div>`; }); }
+            function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
+            const handleSearch = () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                const searchResults = allArticles.filter(article => article.title.toLowerCase().includes(searchTerm) || article.summary.toLowerCase().includes(searchTerm));
+                filterContent('all');
+                const allContainers = document.querySelectorAll('[id$="-news-container"]');
+                allContainers.forEach(c => c.innerHTML = '');
+                if (searchResults.length === 0) { noResultsView.classList.remove('hidden'); newsContentArea.classList.add('hidden'); return; }
+                renderNewsFromData(searchResults.filter(a => a.category === 'supreme-court'), 'sc-news-container');
+                renderNewsFromData(searchResults.filter(a => a.category === 'high-court'), 'hc-news-container');
+                renderNewsFromData(searchResults.filter(a => a.category === 'columns'), 'columns-container');
+                renderNewsFromData(searchResults.filter(a => a.category === 'interviews'), 'interviews-container');
+            };
+            function renderNewsFromData(data, containerId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                container.innerHTML = '';
+                data.forEach(article => {
+                    container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card cursor-pointer" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p></div></div>`;
+                });
+            }
             searchInput.addEventListener('input', debounce(handleSearch, 300));
 
             // --- INITIAL LOAD ---
             fetchAllArticles();
-            fetchAndDisplayAds(); // <-- Call the new function to load ads
+            fetchAndDisplayAds();
         });
     </script>
 </body>
