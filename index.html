@@ -43,6 +43,10 @@
                 <button id="mobile-menu-button" class="md:hidden text-gray-700 text-2xl"><i class="fas fa-bars"></i></button>
             </nav>
         </div>
+        <!-- Header Ad Slot -->
+        <div class="container mx-auto px-4 pb-2">
+            <div id="header-ad-container" class="ad-placeholder h-16 w-full"></div>
+        </div>
     </header>
 
     <!-- MAIN CONTENT -->
@@ -77,7 +81,10 @@
                     </div>
                     <div id="no-results" class="hidden text-center py-16"><i class="fas fa-search text-4xl text-gray-400 mb-4"></i><h3 class="text-2xl font-semibold text-gray-700">No Stories Found</h3><p class="text-gray-500 mt-2">We couldn't find any articles matching your search.</p></div>
                 </div>
-                <aside class="lg:col-span-1"><div class="ad-placeholder h-64 w-full">Sidebar Ad</div></aside>
+                <!-- Sidebar Ad Slot -->
+                <aside class="lg:col-span-1">
+                    <div id="sidebar-ad-container" class="ad-placeholder h-64 w-full"></div>
+                </aside>
             </div>
         </div>
     </main>
@@ -87,17 +94,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', async function () {
             // ===================================================================
-            // SUPABASE SETUP - Your credentials have been added.
+            // SUPABASE SETUP
             // ===================================================================
             const SUPABASE_URL = 'https://vdoczcmcueiztpgqinww.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkb2N6Y21jdWVpenRwZ3Fpbnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3MzI3MzAsImV4cCI6MjA3MDMwODczMH0.dSPZlduTFZMn6rusQbrzy51vAZ3oWS8ontAEmTgajQA';
-
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            // --- Global State ---
+            // --- Global State & UI Elements ---
             let allArticles = [];
-
-            // --- UI Elements ---
             const allNewsView = document.getElementById('all-news-view');
             const fullArticleView = document.getElementById('full-article-view');
             const searchInput = document.getElementById('search-input');
@@ -105,39 +109,17 @@
             const newsContentArea = document.getElementById('news-content-area');
 
             // --- SKELETON LOADER ---
-            function createSkeletonCard() {
-                return `
-                    <div class="skeleton bg-white rounded-lg shadow-md overflow-hidden">
-                        <div class="w-full h-48 bg-gray-300"></div>
-                        <div class="p-4 space-y-3">
-                            <div class="h-4 bg-gray-300 rounded w-1/4"></div>
-                            <div class="h-6 bg-gray-300 rounded w-full"></div>
-                            <div class="h-4 bg-gray-300 rounded w-5/6"></div>
-                            <div class="h-4 bg-gray-300 rounded w-3/4"></div>
-                        </div>
-                    </div>
-                `;
-            }
+            function createSkeletonCard() { /* ... skeleton code ... */ return `<div class="skeleton bg-white rounded-lg shadow-md overflow-hidden"><div class="w-full h-48 bg-gray-300"></div><div class="p-4 space-y-3"><div class="h-4 bg-gray-300 rounded w-1/4"></div><div class="h-6 bg-gray-300 rounded w-full"></div><div class="h-4 bg-gray-300 rounded w-5/6"></div><div class="h-4 bg-gray-300 rounded w-3/4"></div></div></div>`; }
             function showSkeletons() {
                 const containers = ['sc-news-container', 'hc-news-container', 'columns-container', 'interviews-container'];
-                containers.forEach(id => {
-                    const container = document.getElementById(id);
-                    container.innerHTML = createSkeletonCard().repeat(3);
-                });
+                containers.forEach(id => { document.getElementById(id).innerHTML = createSkeletonCard().repeat(3); });
             }
 
             // --- DATA FETCHING & RENDERING ---
             async function fetchAllArticles() {
                 showSkeletons();
-                const { data, error } = await supabaseClient
-                    .from('articles')
-                    .select('*')
-                    .order('published_date', { ascending: false });
-
-                if (error) {
-                    console.error('Error fetching articles:', error);
-                    return;
-                }
+                const { data, error } = await supabaseClient.from('articles').select('*').order('published_date', { ascending: false });
+                if (error) { console.error('Error fetching articles:', error); return; }
                 allArticles = data;
                 renderAllSections();
             }
@@ -152,47 +134,38 @@
             function renderNews(category, containerId, limit) {
                 const container = document.getElementById(containerId);
                 const filteredArticles = allArticles.filter(article => article.category === category).slice(0, limit);
-                
                 if (!container) return;
                 container.innerHTML = '';
+                if (filteredArticles.length === 0) { container.innerHTML = '<p class="text-gray-500 md:col-span-2">No articles found in this category.</p>'; return; }
+                filteredArticles.forEach(article => {
+                    container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p><a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a></div></div>`;
+                });
+            }
 
-                if (filteredArticles.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 md:col-span-2">No articles found in this category.</p>';
+            // --- NEW: DYNAMIC AD FETCHING ---
+            async function fetchAndDisplayAds() {
+                const { data, error } = await supabaseClient
+                    .from('advertisements')
+                    .select('ad_name, ad_code')
+                    .eq('is_active', true);
+
+                if (error) {
+                    console.error('Error fetching ads:', error);
                     return;
                 }
 
-                filteredArticles.forEach(article => {
-                    const articleCard = `
-                        <div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}">
-                            <img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover">
-                            <div class="p-4 flex flex-col h-full">
-                                <h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3>
-                                <p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p>
-                                <p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p>
-                                <a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += articleCard;
+                data.forEach(ad => {
+                    const adContainer = document.getElementById(`${ad.ad_name}-container`);
+                    if (adContainer) {
+                        adContainer.innerHTML = ad.ad_code;
+                        adContainer.classList.remove('ad-placeholder'); // Remove placeholder style if ad loads
+                    }
                 });
             }
 
             // --- VIEW & NAVIGATION LOGIC ---
-            function showView(viewToShow) {
-                allNewsView.classList.toggle('hidden', viewToShow !== 'all-news');
-                fullArticleView.classList.toggle('hidden', viewToShow !== 'full-article');
-                window.scrollTo(0, 0);
-            }
-
-            function filterContent(category) {
-                showView('all-news');
-                searchInput.value = '';
-                noResultsView.classList.add('hidden');
-                newsContentArea.classList.remove('hidden');
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.classList.toggle('hidden', category !== 'all' && section.id !== category + '-news-section');
-                });
-            }
+            function showView(viewToShow) { /* ... view logic ... */ allNewsView.classList.toggle('hidden', viewToShow !== 'all-news'); fullArticleView.classList.toggle('hidden', viewToShow !== 'full-article'); window.scrollTo(0, 0); }
+            function filterContent(category) { /* ... filter logic ... */ showView('all-news'); searchInput.value = ''; noResultsView.classList.add('hidden'); newsContentArea.classList.remove('hidden'); document.querySelectorAll('.content-section').forEach(section => { section.classList.toggle('hidden', category !== 'all' && section.id !== category + '-news-section'); }); }
 
             // --- EVENT LISTENERS ---
             document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('all'); });
@@ -203,76 +176,17 @@
             document.getElementById('interviews-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('interviews'); });
             document.getElementById('back-to-news-button').addEventListener('click', () => { showView('all-news'); filterContent('all'); });
 
-            newsContentArea.addEventListener('click', function(e) {
-                if (e.target.classList.contains('read-more-link')) {
-                    e.preventDefault();
-                    const card = e.target.closest('.news-card');
-                    const articleId = parseInt(card.dataset.id);
-                    const article = allArticles.find(a => a.id === articleId);
-
-                    if (article) {
-                        document.getElementById('full-article-image').src = article.image_url || 'https://placehold.co/800x450/E2E8F0/4A5568?text=Image';
-                        document.getElementById('full-article-title').textContent = article.title;
-                        document.getElementById('full-article-meta').textContent = `By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}`;
-                        document.getElementById('full-article-content').innerHTML = article.full_content.replace(/\n/g, '<br>');
-                        showView('full-article');
-                    }
-                }
-            });
+            newsContentArea.addEventListener('click', function(e) { /* ... read more logic ... */ if (e.target.classList.contains('read-more-link')) { e.preventDefault(); const card = e.target.closest('.news-card'); const articleId = parseInt(card.dataset.id); const article = allArticles.find(a => a.id === articleId); if (article) { document.getElementById('full-article-image').src = article.image_url || 'https://placehold.co/800x450/E2E8F0/4A5568?text=Image'; document.getElementById('full-article-title').textContent = article.title; document.getElementById('full-article-meta').textContent = `By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}`; document.getElementById('full-article-content').innerHTML = article.full_content.replace(/\n/g, '<br>'); showView('full-article'); } } });
 
             // --- SEARCH LOGIC WITH DEBOUNCING ---
-            function debounce(func, delay) {
-                let timeout;
-                return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
-            }
-
-            const handleSearch = () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                const searchResults = allArticles.filter(article => 
-                    article.title.toLowerCase().includes(searchTerm) || 
-                    article.summary.toLowerCase().includes(searchTerm)
-                );
-                
-                filterContent('all');
-                const allContainers = document.querySelectorAll('[id$="-news-container"]');
-                allContainers.forEach(c => c.innerHTML = '');
-
-                if (searchResults.length === 0) {
-                    noResultsView.classList.remove('hidden');
-                    newsContentArea.classList.add('hidden');
-                    return;
-                }
-
-                renderNewsFromData(searchResults.filter(a => a.category === 'supreme-court'), 'sc-news-container');
-                renderNewsFromData(searchResults.filter(a => a.category === 'high-court'), 'hc-news-container');
-                renderNewsFromData(searchResults.filter(a => a.category === 'columns'), 'columns-container');
-                renderNewsFromData(searchResults.filter(a => a.category === 'interviews'), 'interviews-container');
-            };
-            
-            function renderNewsFromData(data, containerId) {
-                 const container = document.getElementById(containerId);
-                 if (!container) return;
-                 container.innerHTML = '';
-                 data.forEach(article => {
-                    const articleCard = `
-                        <div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}">
-                            <img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover">
-                            <div class="p-4 flex flex-col h-full">
-                                <h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3>
-                                <p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p>
-                                <p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p>
-                                <a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += articleCard;
-                 });
-            }
-
+            function debounce(func, delay) { /* ... debounce logic ... */ let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
+            const handleSearch = () => { /* ... search logic ... */ const searchTerm = searchInput.value.toLowerCase(); const searchResults = allArticles.filter(article => article.title.toLowerCase().includes(searchTerm) || article.summary.toLowerCase().includes(searchTerm)); filterContent('all'); const allContainers = document.querySelectorAll('[id$="-news-container"]'); allContainers.forEach(c => c.innerHTML = ''); if (searchResults.length === 0) { noResultsView.classList.remove('hidden'); newsContentArea.classList.add('hidden'); return; } renderNewsFromData(searchResults.filter(a => a.category === 'supreme-court'), 'sc-news-container'); renderNewsFromData(searchResults.filter(a => a.category === 'high-court'), 'hc-news-container'); renderNewsFromData(searchResults.filter(a => a.category === 'columns'), 'columns-container'); renderNewsFromData(searchResults.filter(a => a.category === 'interviews'), 'interviews-container'); };
+            function renderNewsFromData(data, containerId) { /* ... render search results logic ... */ const container = document.getElementById(containerId); if (!container) return; container.innerHTML = ''; data.forEach(article => { container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p><a href="#" class="read-more-link text-blue-600 hover:underline font-semibold mt-2 inline-block">Read More...</a></div></div>`; }); }
             searchInput.addEventListener('input', debounce(handleSearch, 300));
 
             // --- INITIAL LOAD ---
             fetchAllArticles();
+            fetchAndDisplayAds(); // <-- Call the new function to load ads
         });
     </script>
 </body>
