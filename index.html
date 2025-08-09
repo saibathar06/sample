@@ -43,6 +43,14 @@
                 <button id="mobile-menu-button" class="md:hidden text-gray-700 text-2xl"><i class="fas fa-bars"></i></button>
             </nav>
         </div>
+        <!-- FIX: Re-added the mobile menu container -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <a href="#" class="mobile-nav-link block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100" data-category="all">Home</a>
+            <a href="#" class="mobile-nav-link block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100" data-category="sc">Supreme Court</a>
+            <a href="#" class="mobile-nav-link block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100" data-category="hc">High Courts</a>
+            <a href="#" class="mobile-nav-link block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100" data-category="columns">Columns</a>
+            <a href="#" class="mobile-nav-link block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100" data-category="interviews">Interviews</a>
+        </div>
         <!-- Header Ad Slot -->
         <div class="container mx-auto px-4 pb-2">
             <div id="header-ad-container" class="ad-placeholder h-16 w-full"></div>
@@ -76,9 +84,7 @@
                         <!-- Sections will be dynamically populated here -->
                         <div id="sc-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-red-700 pb-2">Supreme Court News</h2><div id="sc-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
                         <div id="hc-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-blue-600 pb-2">High Court News</h2><div id="hc-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
-                        <!-- FIX: Changed ID to match filtering logic -->
                         <div id="columns-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-green-700 pb-2">Columns</h2><div id="columns-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
-                        <!-- FIX: Changed ID to match filtering logic -->
                         <div id="interviews-news-section" class="content-section mb-10"><h2 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-purple-700 pb-2">Interviews</h2><div id="interviews-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div></div>
                     </div>
                     <div id="no-results" class="hidden text-center py-16"><i class="fas fa-search text-4xl text-gray-400 mb-4"></i><h3 class="text-2xl font-semibold text-gray-700">No Stories Found</h3><p class="text-gray-500 mt-2">We couldn't find any articles matching your search.</p></div>
@@ -109,6 +115,8 @@
             const searchInput = document.getElementById('search-input');
             const noResultsView = document.getElementById('no-results');
             const newsContentArea = document.getElementById('news-content-area');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
 
             // --- SKELETON LOADER ---
             function createSkeletonCard() { return `<div class="skeleton bg-white rounded-lg shadow-md overflow-hidden"><div class="w-full h-48 bg-gray-300"></div><div class="p-4 space-y-3"><div class="h-4 bg-gray-300 rounded w-1/4"></div><div class="h-6 bg-gray-300 rounded w-full"></div><div class="h-4 bg-gray-300 rounded w-5/6"></div><div class="h-4 bg-gray-300 rounded w-3/4"></div></div></div>`; }
@@ -140,7 +148,6 @@
                 container.innerHTML = '';
                 if (filteredArticles.length === 0) { container.innerHTML = '<p class="text-gray-500 md:col-span-2">No articles found in this category.</p>'; return; }
                 filteredArticles.forEach(article => {
-                    // FIX: Added cursor-pointer and removed the <a> tag for "Read More"
                     container.innerHTML += `<div class="bg-white rounded-lg shadow-md overflow-hidden news-card cursor-pointer" data-id="${article.id}"><img src="${article.image_url || 'https://placehold.co/600x400/E2E8F0/4A5568?text=Image'}" alt="${article.title}" class="article-image w-full h-48 object-cover"><div class="p-4 flex flex-col h-full"><h3 class="article-title font-semibold text-lg text-gray-800 my-1">${article.title}</h3><p class="article-summary text-gray-600 text-sm flex-grow">${article.summary}</p><p class="article-meta text-xs text-gray-500 mt-2">By ${article.author} | ${new Date(article.published_date).toLocaleDateString()}</p></div></div>`;
                 });
             }
@@ -166,12 +173,26 @@
                 noResultsView.classList.add('hidden');
                 newsContentArea.classList.remove('hidden');
                 document.querySelectorAll('.content-section').forEach(section => {
-                    // FIX: Logic now correctly matches section IDs like 'columns-news-section'
                     section.classList.toggle('hidden', category !== 'all' && section.id !== category + '-news-section');
                 });
             }
 
             // --- EVENT LISTENERS ---
+            // FIX: Added event listener for mobile menu button
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // FIX: Added listeners for links inside the mobile menu
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const category = e.target.dataset.category;
+                    filterContent(category);
+                    mobileMenu.classList.add('hidden'); // Hide menu after click
+                });
+            });
+
             document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('all'); });
             document.getElementById('home-link-desktop').addEventListener('click', (e) => { e.preventDefault(); filterContent('all'); });
             document.getElementById('sc-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('sc'); });
@@ -180,7 +201,6 @@
             document.getElementById('interviews-link').addEventListener('click', (e) => { e.preventDefault(); filterContent('interviews'); });
             document.getElementById('back-to-news-button').addEventListener('click', () => { showView('all-news'); filterContent('all'); });
 
-            // FIX: Event listener now listens for clicks on the entire card
             newsContentArea.addEventListener('click', function(e) {
                 const card = e.target.closest('.news-card');
                 if (card) {
@@ -229,3 +249,4 @@
     </script>
 </body>
 </html>
+
